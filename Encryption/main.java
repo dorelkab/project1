@@ -9,7 +9,7 @@ public class main {
             decrypt(args[2], args[4], args[6]);
         }
         else if(args[0].equals("-b")){
-
+            hack(args[2], args[4], args[6]);
         }
         else{
             System.out.println("error");
@@ -49,7 +49,7 @@ public class main {
             aes(encState,key3);
             j=fillArr(encState,encBytesArray,j);
         }
-        File destFile = new File(destPath+"\\cypher");
+        File destFile = new File(destPath);
         try {
             destFile.createNewFile();
             FileOutputStream fileOutputStreamDest=new FileOutputStream(destFile);
@@ -94,7 +94,7 @@ public class main {
             aesDec(encState,key1);
             j=fillArr(encState,decBytesArray,j);
         }
-        File destFile = new File(destPath+"\\decypher");
+        File destFile = new File(destPath);
         try {
             destFile.createNewFile();
             FileOutputStream fileOutputStreamDest=new FileOutputStream(destFile);
@@ -107,7 +107,82 @@ public class main {
     }
 
     public static void hack(String plainTextPath, String cypherTextPath, String destPath){
-        
+        File plainFile = new File(plainTextPath);
+        File cypherFile = new File(cypherTextPath);
+        byte[] plainBytesArray=new byte[(int)plainFile.length()];
+        byte[] cypherBytesArray=new byte[(int)cypherFile.length()];
+        try {
+            FileInputStream fileInputStreamKey = new FileInputStream(plainFile);
+            fileInputStreamKey.read(plainBytesArray);
+            FileInputStream fileInputStreamOrg = new FileInputStream(cypherFile);
+            fileInputStreamOrg.read(cypherBytesArray);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[][] key1=new byte[4][4];
+        byte[][] key2=new byte[4][4];
+        byte[][] key3=new byte[4][4];
+        byte[][] plainState=new byte[4][4];
+        byte[][] cypherState=new byte[4][4];
+        fillMat(plainState,plainBytesArray,0);
+        fillMat(cypherState,cypherBytesArray,0);
+        for(int i=0; i<4; i++){
+            for(int j=0; j<4; j++){
+                key1[i][j]=1;
+                key2[i][j]=0;
+            }
+        }
+        boolean key1isDistinct=false;
+        boolean key2isDistinct=false;
+        while(!key1isDistinct || !key2isDistinct){
+            byte[][] testKey1=new byte[4][4];
+            byte[][] testKey2=new byte[4][4];
+            for(int i=0; i<4; i++){
+                for (int j=0; j<4; j++){
+                    key3[i][j]=plainState[i][j];
+                    testKey1[i][j]=key1[i][j];
+                    testKey2[i][j]=key2[i][j];
+                }
+            }
+            shiftColumns(key3);
+            shiftColumns(key3);
+            shiftColumns(key3);
+            shiftColumns(testKey1);
+            shiftColumns(testKey1);
+            shiftColumns(testKey2);
+            addRoundKey(key3,cypherState);
+            addRoundKey(key3,testKey1);
+            addRoundKey(key3,testKey2);
+            for(int i=0; i<4; i++){
+                for (int j=0; j<4; j++){
+                    if(key3[i][j]!=key1[i][j])
+                        key1isDistinct=true;
+                    if(key3[i][j]!=key2[i][j])
+                        key2isDistinct=true;
+                }
+            }
+            if(!key1isDistinct)
+                key1[0][0]++;
+            if(!key2isDistinct)
+                key1[0][0]++;
+        }
+        byte[] keys=new byte[48];
+        int index=0;
+        index=fillArr(key1,keys,index);
+        index=fillArr(key2,keys,index);
+        fillArr(key3,keys,index);
+        File destFile = new File(destPath);
+        try {
+            destFile.createNewFile();
+            FileOutputStream fileOutputStreamDest=new FileOutputStream(destFile);
+            fileOutputStreamDest.write(keys);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void aesDec(byte[][] state, byte[][] key){
